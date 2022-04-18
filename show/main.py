@@ -17,6 +17,7 @@ from utilities_common.db import Db
 from datetime import datetime
 import utilities_common.constants as constants
 from utilities_common.general import load_db_config
+import subprocess
 
 # mock the redis for unit test purposes #
 try:
@@ -68,22 +69,25 @@ VLAN_SUB_INTERFACE_SEPARATOR = '.'
 
 GEARBOX_TABLE_PHY_PATTERN = r"_GEARBOX_TABLE:phy:*"
 
-COMMAND_TIMEOUT = 300
-
 # To be enhanced. Routing-stack information should be collected from a global
 # location (configdb?), so that we prevent the continous execution of this
 # bash oneliner. To be revisited once routing-stack info is tracked somewhere.
 def get_routing_stack():
-    result = None
     command = "sudo docker ps | grep bgp | awk '{print$2}' | cut -d'-' -f3 | cut -d':' -f1 | head -n 1"
 
     try:
-        stdout = subprocess.check_output(command, shell=True, timeout=COMMAND_TIMEOUT)
+        proc = subprocess.Popen(command,
+                                stdout=subprocess.PIPE,
+                                shell=True,
+                                text=True)
+        stdout = proc.communicate()[0]
+        proc.wait()
         result = stdout.rstrip('\n')
-    except Exception as err:
-        click.echo('Failed to get routing stack: {}'.format(err), err=True)
 
-    return result
+    except OSError as e:
+        raise OSError("Cannot detect routing-stack")
+
+    return (result)
 
 
 # Global Routing-Stack variable
@@ -177,7 +181,6 @@ cli.add_command(chassis_modules.chassis)
 cli.add_command(dropcounters.dropcounters)
 cli.add_command(feature.feature)
 cli.add_command(fgnhg.fgnhg)
-cli.add_command(flow_counters.flowcnt_route)
 cli.add_command(flow_counters.flowcnt_trap)
 cli.add_command(kdump.kdump)
 cli.add_command(interfaces.interfaces)
@@ -1132,6 +1135,27 @@ def users(verbose):
     run_command(cmd, display_cmd=verbose)
 
 
+def cpy_bf_drivers():
+    str_drv = 'bf_drivers.log'
+    str_dock = 'docker cp syncd:/'
+    str_temp = ' /home/admin/temp/'
+    str_rm_temp = 'rm -rf /home/admin/temp/'
+    str_mkdir = 'mkdir /home/admin/temp/'
+    resp = subprocess.check_output(str_rm_temp, shell=True, text=True)
+    resp = subprocess.check_output(str_mkdir, shell=True, text=True)
+
+    str_find_logs = 'docker exec -ti syncd ls -1'
+    resp = subprocess.check_output(str_find_logs, shell=True, text=True)
+    arr_resp = resp.split()
+    for i in arr_resp:
+        found = i.find(str_drv)
+        if found != -1:
+            str_send = str_dock + i + str_temp
+            resp = subprocess.check_output(str_send, shell=True, text=True)
+                    
+    str_send_temp = 'sudo cp /home/admin/temp/* /var/log/'   
+    resp = subprocess.check_output(str_send_temp, shell=True, text=True)
+
 #
 # 'techsupport' command ("show techsupport")
 #
@@ -1147,7 +1171,9 @@ def users(verbose):
 @click.option('--redirect-stderr', '-r', is_flag=True, help="Redirect an intermediate errors to STDERR")
 def techsupport(since, global_timeout, cmd_timeout, verbose, allow_process_stop, silent, debug_dump, redirect_stderr):
     """Gather information for troubleshooting"""
-    cmd = "sudo timeout --kill-after={}s -s SIGTERM --foreground {}m".format(COMMAND_TIMEOUT, global_timeout)
+    cmd = "sudo timeout -s SIGTERM --foreground {}m".format(global_timeout)
+    subprocess.check_output('sudo rm -f /var/log/bf_drivers.log*', shell=True, text=True)
+    cpy_bf_drivers()
 
     if allow_process_stop:
         cmd += " -a"
@@ -1162,14 +1188,15 @@ def techsupport(since, global_timeout, cmd_timeout, verbose, allow_process_stop,
         cmd += " -s '{}'".format(since)
 
     if debug_dump:
-        cmd += " -d"
+        cmd += " -d "
 
     cmd += " -t {}".format(cmd_timeout)
     if redirect_stderr:
         cmd += " -r"
     run_command(cmd, display_cmd=verbose)
-
-
+    
+    subprocess.check_output('sudo rm -f /var/log/bf_drivers.log*', shell=True, text=True)
+    
 #
 # 'runningconfiguration' group ("show runningconfiguration")
 #
