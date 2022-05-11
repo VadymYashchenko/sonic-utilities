@@ -78,7 +78,7 @@ def get_routing_stack():
     command = "sudo docker ps | grep bgp | awk '{print$2}' | cut -d'-' -f3 | cut -d':' -f1 | head -n 1"
 
     try:
-        stdout = subprocess.check_output(command, shell=True, timeout=COMMAND_TIMEOUT)
+        stdout = subprocess.check_output(command, shell=True, text=True, timeout=COMMAND_TIMEOUT)
         result = stdout.rstrip('\n')
     except Exception as err:
         click.echo('Failed to get routing stack: {}'.format(err), err=True)
@@ -207,7 +207,7 @@ if is_gearbox_configured():
 def get_interface_bind_to_vrf(config_db, vrf_name):
     """Get interfaces belong to vrf
     """
-    tables = ['INTERFACE', 'PORTCHANNEL_INTERFACE', 'VLAN_INTERFACE', 'LOOPBACK_INTERFACE']
+    tables = ['INTERFACE', 'PORTCHANNEL_INTERFACE', 'VLAN_INTERFACE', 'LOOPBACK_INTERFACE', 'VLAN_SUB_INTERFACE']
     data = []
     for table_name in tables:
         interface_dict = config_db.get_table(table_name)

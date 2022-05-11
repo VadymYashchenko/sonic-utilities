@@ -683,6 +683,7 @@
         "access": "False"
     },
     "PORT_TABLE|Ethernet0": {
+        "rmt_adv_speeds" : "10,100,1000",
         "speed" : "100000",
         "supported_speeds": "10000,25000,40000,100000"
     },
@@ -801,5 +802,26 @@
         "pck_expected_count": "840",
         "link_prober_unknown_start": "2022-Jan-26 03:13:05.366900",
         "link_prober_unknown_end": "2022-Jan-26 03:17:35.446580"
+    },
+    "PORT_TABLE|Ethernet16": {
+        "state": "ok",
+        "netdev_oper_status": "up",
+        "admin_status": "up",
+        "mtu":  "9100",
+        "speed": "100"
+    },
+    "PORT_TABLE|Ethernet36": {
+        "state": "ok",
+        "netdev_oper_status": "up",
+        "admin_status": "up",
+        "mtu":  "9100",
+        "speed": "10"
+    },
+    "PORT_TABLE|Ethernet24": {
+        "state": "ok",
+        "netdev_oper_status": "up",
+        "admin_status": "up",
+        "mtu":  "9100",
+        "speed": "1000"
     }
 }
