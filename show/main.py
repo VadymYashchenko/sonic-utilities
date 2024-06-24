@@ -17,6 +17,7 @@ from utilities_common.db import Db
 from datetime import datetime
 import utilities_common.constants as constants
 from utilities_common.general import load_db_config
+import subprocess
 
 # mock the redis for unit test purposes #
 try:
@@ -1131,6 +1132,26 @@ def users(verbose):
     cmd = "who"
     run_command(cmd, display_cmd=verbose)
 
+def cpy_bf_drivers():
+    str_drv = 'bf_drivers.log'
+    str_dock = 'docker cp syncd:/'
+    str_temp = ' /home/admin/temp/'
+    str_rm_temp = 'rm -rf /home/admin/temp/'
+    str_mkdir = 'mkdir /home/admin/temp/'
+    resp = subprocess.check_output(str_rm_temp, shell=True, text=True)
+    resp = subprocess.check_output(str_mkdir, shell=True, text=True)
+
+    str_find_logs = 'docker exec -ti syncd ls -1'
+    resp = subprocess.check_output(str_find_logs, shell=True, text=True)
+    arr_resp = resp.split()
+    for i in arr_resp:
+        found = i.find(str_drv)
+        if found != -1:
+            str_send = str_dock + i + str_temp
+            resp = subprocess.check_output(str_send, shell=True, text=True)
+                    
+    str_send_temp = 'sudo cp /home/admin/temp/* /var/log/'   
+    resp = subprocess.check_output(str_send_temp, shell=True, text=True)
 
 #
 # 'techsupport' command ("show techsupport")
@@ -1148,6 +1169,8 @@ def users(verbose):
 def techsupport(since, global_timeout, cmd_timeout, verbose, allow_process_stop, silent, debug_dump, redirect_stderr):
     """Gather information for troubleshooting"""
     cmd = "sudo timeout --kill-after={}s -s SIGTERM --foreground {}m".format(COMMAND_TIMEOUT, global_timeout)
+    subprocess.check_output('sudo rm -f /var/log/bf_drivers.log*', shell=True, text=True)
+    cpy_bf_drivers()
 
     if allow_process_stop:
         cmd += " -a"
@@ -1169,7 +1192,7 @@ def techsupport(since, global_timeout, cmd_timeout, verbose, allow_process_stop,
         cmd += " -r"
     run_command(cmd, display_cmd=verbose)
 
-
+    subprocess.check_output('sudo rm -f /var/log/bf_drivers.log*', shell=True, text=True)
 #
 # 'runningconfiguration' group ("show runningconfiguration")
 #
